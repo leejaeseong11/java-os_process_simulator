@@ -1,6 +1,5 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import javax.swing.JFrame;
@@ -428,171 +427,166 @@ public class ProcessScheduler extends JFrame { // Process Scheduler GUI
 	}
 
 	// 알고리즘 시작
-	public void FCFS_func() {
-		int ct[] = new int[N]; // 완료 시간
-		int timeExecution[] = new int[N];
-		int currentTime = 0;
-		double turnaround;
-		turnArr = new double[N];
-		waitArr = new double[N];
-		NTTArr = new double[N];
-		endArr = new int[N];
-		paintArr = new int[endArr[N - 1]];
-		int Processescount = N;
-		int middleHold = 0;
-		ArrayList process;
-		ArrayList paint;
-		ArrayList end;
-		ArrayList cparrival, cpburst;
+    public void FCFS_func() { 
+        int ct[] = new int[N];     // 완료 시간
+        int timeExecution[] = new int[N];
+        int currentTime = 0;
+        turnArr = new double [N];
+        waitArr = new double [N];
+        NTTArr = new double [N];
+        endArr = new int [N];
+        paintArr = new int [endArr[N-1]];
+        int Processescount = N;
+        int middleHold = 0;
+        ArrayList process;
+        ArrayList paint;
+        ArrayList end;
+        ArrayList cparrival,cpburst;
+        
+        cparrival = (ArrayList)arrival.clone();
+        cpburst = (ArrayList)burst.clone();
+        
+        int excution, burstUpdate;
+        
+        process = new ArrayList();
+        paint = new ArrayList();
+        end = new ArrayList();
+        
+        while(Processescount>0) {      //총 실행해야할 프로세스 > 0
+           for(int i = 0; i < N ; i++) {
+              if((int)arrival.get(i) != -1 && (int)arrival.get(i) <= currentTime) {
+                 process.add(i);            //현재 대기열에 진입한 프로세스  
+                 arrival.set(i,-1);         //다시 대기열에 들어오지 않도록 -1값으로 변경
+              }
+              
+           }
+           if(process.isEmpty()) {            //모든프로세스가 완료되지않았고
+              paint.add(-1);               //현재 대기중이거나 진행중이 프로세스가 없을 때
+              currentTime++;
+           }
+           else {
+              excution = (int)process.remove(0);      //가장 먼저들어온 프로세스 진행
+              while((int)burst.get(excution)>0) {      //선택된 프로세스가 실행시간이 0보다 클 때
+                 paint.add(excution);               //그리기 위한  paint에 그려준다.
+                 currentTime++;                  //현재 시간 증가 
+                 burstUpdate = (int)burst.get(excution)-1;   //시간이 지나면서 실행시간을 감소해준다.
+                 burst.set(excution,burstUpdate);   //갱신된 실행시간을 넣어준다. 
+              }
+              end.add(currentTime);      //선택된 프로세스 실행시간이 0이되면 그 당시의 시간을 저장한다.
+              ct[excution] = currentTime;
+              Processescount--;      //총 실행해야할 프로세스 개수 감소
+           }
+           
+        }
+        
+        
+        turnArr = new double [N];            //반환시간을 저장한다.
+        for(int i = 0 ; i < N ; i++) {
+           turnArr[i] = ct[i] - (int)cparrival.get(i);   //완료시간-도착시간
+        }
+        
+        NTTArr = new double[N];         //NTT를 구한다.
+        for(int i = 0; i<N; i++){
+           NTTArr[i] = Math.round((turnArr[i] / (int) cpburst.get(i))*100.0)/100.0;   //반환시간/실행시간
+        }
+        
+        waitArr = new double[N];            //대기시간
+        for(int i = 0; i<N; i++){
+           timeExecution[i] = ct[i] - (int) cparrival.get(i);   //완료시간 - 도착시간
+           middleHold = timeExecution[i] - (int) cpburst.get(i);   // (완료시간 -도착시간)-실행시간 = 대기시간
+           waitArr[i] = middleHold;   
+        }
+        
+        endArr = new int [end.size()];      //완료시간
+        paintArr = new int [paint.size()];   //시각화를 위한 배열
+        
+         for(int i=0;i<end.size();i++)
+            endArr[i]=(int)end.get(i);
+         for(int i=0;i<paint.size();i++)
+           paintArr[i]=(int)paint.get(i);
+     }
 
-		cparrival = (ArrayList) arrival.clone();
-		cpburst = (ArrayList) burst.clone();
+    public void RR_func() {
 
-		int excution, burstUpdate;
+        int currentTime, execution, q, endTime[], quantityProcesses, burstUpdate, timeExecution[];
+        ArrayList process, cparrival, cpburst;
+        double middleHold, turnaround;
+        ArrayList end = new ArrayList();
+        ArrayList paint = new ArrayList();
 
-		process = new ArrayList();
-		paint = new ArrayList();
-		end = new ArrayList();
+        process = new ArrayList(); // 프로세스를 나타내는 배열
+        quantityProcesses = N; // 프로세스의 개수(N개)
+        endTime = new int[N]; // 프로세스의 종료시간을 나타내는 배열
+        timeExecution = new int[N]; // (프로세스의 종료시간 - ArrivalTime)를 나타내는 배열
 
-		while (Processescount > 0) {
-			for (int i = 0; i < N; i++) {
-				if ((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime) {
-					process.add(i); // 현재 대기열에 진입한 프로세스
-					arrival.set(i, -1); // 다시 대기열에 들어오지 않도록 -1값으로 변경
-				}
+        cparrival = (ArrayList) arrival.clone(); // ArrivalTime의 복사본
+        cpburst = (ArrayList) burst.clone(); // BurstTime의 복사본
+        currentTime = 0; // 현재시간
 
-			}
-			if (process.isEmpty()) { // 모든프로세스가 완료되지않았고
-				paint.add(-1); // 현재 대기중이거나 진행중이 프로세스가 없을 때
-				currentTime++;
-			} else {
-				excution = (int) process.remove(0);
-				while ((int) burst.get(excution) > 0) {
-					paint.add(excution);
-					currentTime++;
-					burstUpdate = (int) burst.get(excution) - 1;
-					burst.set(excution, burstUpdate);
-				}
-				end.add(currentTime);
-				ct[excution] = currentTime;
-				Processescount--;
-			}
+        while (quantityProcesses > 0) { // 프로세스가 있을 경우 반복문 수행(N개만큼)
+           for (int i = 0; i < N; i++) {
+              if ((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime) {
+                 process.add(i); // 현재 대기열에 진입한 프로세스
+                 arrival.set(i, -1); // 다시 대기열에 들어오지 않도록 -1값으로 변경
+              }
+           }
 
-		}
+           if (process.isEmpty()) { // 처음 프로세스의 ArrivalTime < CurrentTime
+              paint.add(-1); // 프로세스의 순서를 시작하는 부분
+              currentTime++;
+           } else { // 프로세스가 들어온 경우
+              execution = (int) process.remove(0);
+              q = quantum;
 
-		turnArr = new double[N];
-		for (int i = 0; i < N; i++) {
-			turnArr[i] = ct[i] - (int) cparrival.get(i);
-		}
+              while (q > 0 && (int) burst.get(execution) > 0) { // TimeQuantum과 BurstTime이 0보다 클 경우
+                 paint.add(execution); // 프로세스의 순서를 추가
+                 currentTime++;
+                 q--;
+                 burstUpdate = (int) burst.get(execution) - 1; 
+                 burst.set(execution, burstUpdate); // BurstTime의 값을 최신화
+              }
+              end.add(currentTime); // TimeQuantum이 종료한 시간 측정
 
-		NTTArr = new double[N];
-		for (int i = 0; i < N; i++) {
-			turnaround = (int) ct[i] - (int) cparrival.get(i);
-			NTTArr[i] = turnaround / (int) cpburst.get(i);
-		}
+              if ((int) burst.get(execution) > 0) { // BurstTime-TimeQuantum을 실행하고도 BurstTime이 남았을경우
+                 for (int i = 0; i < N; i++) {
+                    if ((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime) {
+                       process.add(i); // 현재 대기열에 진입한 프로세스
+                       arrival.set(i, -1); // 다시 대기열에 들어오지 않도록 -1값으로 변경
+                    }
+                 }
+                 process.add(execution); 
+              } else { // BurstTime이 끝났을 때
+                 endTime[execution] = currentTime; // 프로세스의 종료시간 = CurrentTime
+                 quantityProcesses--; // 프로세스의 개수를 감소
+              }
+           }
+        }
 
-		waitArr = new double[N];
-		for (int i = 0; i < N; i++) {
-			timeExecution[i] = ct[i] - (int) cparrival.get(i);
-			middleHold = timeExecution[i] - (int) cpburst.get(i);
-			waitArr[i] = middleHold;
-		}
+        middleHold = 0;
 
-		endArr = new int[end.size()];
-		paintArr = new int[paint.size()];
+        turnArr = new double[N];
+        for (int i = 0; i < N; i++) // TurnAroundTime = 프로세스의 종료시간 - ArrivalTime
+           turnArr[i] = (int) endTime[i] - (int) cparrival.get(i);
+        NTTArr = new double[N];
+        for (int i = 0; i < N; i++) { // ntt = TurnAroundTime / BurstTime
+           turnaround = (int) endTime[i] - (int) cparrival.get(i);
+           NTTArr[i] = Math.round((turnaround / (int) cpburst.get(i))*100.0)/100.0;
+        }
+        waitArr = new double[N];
+        for (int i = 0; i < N; i++) { // WatingTime = 프로세스의 종료시간 - ArrivalTime - BurstTime
+           timeExecution[i] = endTime[i] - (int) cparrival.get(i);
+           middleHold = timeExecution[i] - (int) cpburst.get(i);
+           waitArr[i] = middleHold;
+        }
 
-		for (int i = 0; i < end.size(); i++)
-			endArr[i] = (int) end.get(i);
-		for (int i = 0; i < paint.size(); i++)
-			paintArr[i] = (int) paint.get(i);
+        endArr = new int[end.size()];
+        paintArr = new int[paint.size()];
 
-	}
-
-	public void RR_func() {
-
-		int currentTime, execution, q, endTime[], quantityProcesses, burstUpdate, timeExecution[];
-		ArrayList process, cparrival, cpburst;
-		double timeMidExe, middleHold, turnaround;
-		int contTeste = 0;
-		String formato, saida;
-		DecimalFormat decimal = new DecimalFormat("0.00");
-		ArrayList end = new ArrayList();
-		ArrayList paint = new ArrayList();
-
-		contTeste++;
-		process = new ArrayList();
-		quantityProcesses = N;
-		endTime = new int[N];
-		timeExecution = new int[N];
-
-		cparrival = (ArrayList) arrival.clone();
-		cpburst = (ArrayList) burst.clone();
-		currentTime = 0;
-
-		while (quantityProcesses > 0) {
-			for (int i = 0; i < N; i++) {
-				if ((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime) {
-					process.add(i);
-					arrival.set(i, -1);
-				}
-			}
-
-			if (process.isEmpty()) {
-				paint.add(-1);
-				currentTime++;
-			} else {
-				execution = (int) process.remove(0);
-				q = quantum;
-
-				while (q > 0 && (int) burst.get(execution) > 0) {
-					paint.add(execution);
-					currentTime++;
-					q--;
-					burstUpdate = (int) burst.get(execution) - 1;
-					burst.set(execution, burstUpdate);
-				}
-				end.add(currentTime);
-
-				if ((int) burst.get(execution) > 0) {
-					for (int i = 0; i < N; i++) {
-						if ((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime) {
-							process.add(i);
-							arrival.set(i, -1);
-						}
-					}
-					process.add(execution);
-				} else {
-					endTime[execution] = currentTime;
-					quantityProcesses--;
-				}
-			}
-		}
-
-		middleHold = 0;
-
-		turnArr = new double[N];
-		for (int i = 0; i < N; i++)
-			turnArr[i] = (int) endTime[i] - (int) cparrival.get(i);
-		NTTArr = new double[N];
-		for (int i = 0; i < N; i++) {
-			turnaround = (int) endTime[i] - (int) cparrival.get(i);
-			NTTArr[i] = turnaround / (int) cpburst.get(i);
-		}
-		waitArr = new double[N];
-		for (int i = 0; i < N; i++) {
-			timeExecution[i] = endTime[i] - (int) cparrival.get(i);
-			middleHold = timeExecution[i] - (int) cpburst.get(i);
-			waitArr[i] = middleHold;
-		}
-
-		endArr = new int[end.size()];
-		paintArr = new int[paint.size()];
-
-		for (int i = 0; i < end.size(); i++)
-			endArr[i] = (int) end.get(i);
-		for (int i = 0; i < paint.size(); i++)
-			paintArr[i] = (int) paint.get(i);
-	}
+        for (int i = 0; i < end.size(); i++) // 프로세스의 끝나는 시간 확인
+           endArr[i] = (int) end.get(i);
+        for (int i = 0; i < paint.size(); i++) // 프로세스를 시각화할 크기 확인
+           paintArr[i] = (int) paint.get(i);
+     }
 
 	public void SPN_func() {
 		int pid[] = new int[N];
@@ -617,7 +611,7 @@ public class ProcessScheduler extends JFrame { // Process Scheduler GUI
 		boolean a = true;
 
 		while (true) {
-			int c = N, min = 999;// brust입력할 때 999이상 입력하면 오류남
+			int c = N, min = 2147483647;// brust입력할 때 999이상 입력하면 오류남
 			if (tot == N) // total no of process = completed process loop will be terminated
 				break;
 
@@ -660,257 +654,248 @@ public class ProcessScheduler extends JFrame { // Process Scheduler GUI
 		}
 	}
 
-	public void SRTN_func() {
-		int pid[] = new int[N]; // 프로세스 번호
-		int ct[] = new int[N]; // 완료 시간
-		int f[] = new int[N]; // f는 flag, 프로세스가 끝났는지 확인한다.
-		int k[] = new int[N]; // k는 초기에 설정된 burst time을 저장한다.
-		int i, st = 0, tot = 0; //
-		float avgwt = 0, avgta = 0;
-		ArrayList end = new ArrayList();
-		ArrayList paint = new ArrayList();
-
-		for (i = 0; i < N; i++) {
-			pid[i] = i + 1;
-			k[i] = (int) burst.get(i); // bt 값은 변경 됨으로 k이라는 배열을 생성하여 값을 저장 시킨다.
-			f[i] = 0;
-		}
-
-		while (true) {
-			int min = 99, c = N;
-			if (tot == N)
-				break;
-
-			for (i = 0; i < N; i++) {
-				if (((int) arrival.get(i) <= st) && (f[i] == 0) && ((int) burst.get(i) < min)) {
-					min = (int) burst.get(i);
-					c = i;
-				}
-			}
-
-			if (c == N) {
-				paint.add(-1);
-				st++;
-			} else {
-				int a = (int) burst.get(c) - 1;
-				burst.set(c, a); // bt[c]--;
-				paint.add(c);
-				st++;
-				if ((int) burst.get(c) == 0) {
-					ct[c] = st;
-					end.add(st);
-					f[c] = 1;
-					tot++;
-				}
-			}
-		}
-
-		turnArr = new double[N];
-		waitArr = new double[N];
-		NTTArr = new double[N];
-
-		for (i = 0; i < N; i++) {
-			turnArr[i] = ct[i] - (int) arrival.get(i);
-			waitArr[i] = turnArr[i] - k[i];
-			NTTArr[i] = Math.round(((double) turnArr[i] / k[i]) * 10d) / 10d;
-		}
-
-		endArr = new int[end.size()];
-		paintArr = new int[paint.size()];
-
-		for (int j = 0; j < end.size(); j++)
-			endArr[j] = (int) end.get(j);
-		for (int j = 0; j < paint.size(); j++)
-			paintArr[j] = (int) paint.get(j);
-
-	}
+    public void SRTN_func() { 
+        int f[] = new int[N];  // f는 flag, 프로세스가 끝났는지 확인한다. 
+        int k[]= new int[N];   // k는 초기에 설정된 burst time을 저장한다.
+        int i, st=0, tot=0;    // 필요한 변수 선언
+        ArrayList end = new ArrayList();
+        ArrayList paint = new ArrayList();
+   
+         for (i=0;i<N;i++)
+         {
+            k[i]= (int)burst.get(i);         //bt 값은 변경 됨으로  k이라는 배열을 생성하여 값을 저장 시킨다. 
+            f[i]= 0;                     //초기 flag값은 0으로 초기화를 해준다. 
+         }
+         
+         while(true){
+            int min=2147483647,c=N;            //작은 burst time을 찾기 위한 min변수 생성
+            if (tot==N)               //N개의 총 프로세스를 완료했을 때  무한반복문 종료
+               break;
+            
+            for ( i=0;i<N;i++)
+            {
+               if (((int)arrival.get(i)<=st) && (f[i]==0) && ((int)burst.get(i)<min))   //현재 진행시간 st 보다 작은 수와 가장 작은 bust time일 때 
+               {   
+                  min=(int)burst.get(i);                                    
+                  c=i;                                                //프로세스 실행한다. 
+               }
+            }
+            
+            if (c==N)               //실행중이지만 어떠한 프로세스도 실행중이 아닐 때
+            {
+               paint.add(-1);  	        //-1로 공백처리를 한다. 
+               st++;               //시간은 진행
+            }
+            else
+            {
+               int a = (int)burst.get(c)-1;
+               burst.set(c, a); //bt[c]--;
+               paint.add(c);
+               st++;
+               if ((int)burst.get(c)==0)         //프로세스가 모든 실행시간을 했을 때
+               {
+                  end.add(st);               //현재시간을 완료시간에 넣는다.
+                  f[c]=1;                     //완료한 프로젝트는 1로 넣어서 다시 돌아가지않도록한다.
+                  tot++;                     //완료한 프로세스 개수 증가
+               }
+            }
+         }
+         
+         turnArr = new double[N];   
+         waitArr = new double[N];
+         NTTArr = new double[N];
+         
+         for(i=0;i<N;i++)
+         {
+            turnArr[i] = (int)end.get(i) - (int)arrival.get(i);         //반환시간 = 완료시간 - 도착시간
+            waitArr[i] = turnArr[i] - k[i];      // 대기시간 = 반환시간 - 실행시간
+            NTTArr[i] = Math.round(((double)turnArr[i]/k[i])*100.0)/100.0;   // NTT = 반환시간/실행시간
+         }
+         
+         endArr = new int [end.size()];      //완료시간
+         paintArr = new int [paint.size()];   //시각화를 위한 배열
+         
+          for(int j=0;j<end.size();j++)
+             endArr[j]=(int)end.get(j);
+          for(int j=0;j<paint.size();j++)
+            paintArr[j]=(int)paint.get(j);
+         
+     }
 
 	public void HRRN_func() {
-		turnArr = new double[N];
-		waitArr = new double[N];
-		NTTArr = new double[N];
-		int currentTime, endTime[], quantityProcesses, burstUpdate;
-		ArrayList cparrival, cpburst;
-		String ordem;
-		double max_age, x;
+	      turnArr = new double[N];
+	      waitArr = new double[N];
+	      NTTArr = new double[N];
+	      int currentTime, endTime[], quantityProcesses, burstUpdate;
+	      ArrayList cparrival, cpburst;
+	      double max_age, x;
 
-		ArrayList end = new ArrayList();
-		ArrayList paint = new ArrayList();
+	      ArrayList end = new ArrayList();
+	      ArrayList paint = new ArrayList();
 
-		int a = 0; // 프로세스를 순서를 나타낼 때 값을 저장할 a 선언. 0으로 초기화.
-		int temp_i = 0;
+	      int a = 0; // 프로세스를 max_aging 순서를 나타낼 때 값을 저장할 a 선언. 0으로 초기화.
+	      int temp_i = 0; // 프로세스를 aging 순서를 나타낼 때 값을 저장할 a 선언. 0으로 초기화.
 
-		String formato, saida;
-		DecimalFormat decimal = new DecimalFormat("0.00");
+	      quantityProcesses = N; // 프로세스의 개수(N개)
+	      endTime = new int[N]; // 프로세스의 종료시간을 나타내는 배열
 
-		ordem = "";
-		quantityProcesses = N;
-		endTime = new int[N];
+	      cparrival = (ArrayList) arrival.clone(); // ArrivalTime의 복사본
+	      cpburst = (ArrayList) burst.clone(); // BurstTime의 복사본
+	      currentTime = 0; // 현재시간
 
-		cparrival = (ArrayList) arrival.clone();
-		cpburst = (ArrayList) burst.clone();
-		currentTime = 0;
+	      while (quantityProcesses > 0) {
+	         int age_size = 0;
+	         double age[];
+	         age = new double[N];
+	         for (int i = 0; i < N; i++) {
+	            if ((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime) {
+	               x = (double) (currentTime - (int) arrival.get(i) + (int) burst.get(i)) / (int) burst.get(i);
+	               // aging(x) = (CurrentTime-ArrivalTime+BurstTime)/BurstTime = WaitingTime/BurstTime
+	               age[i] = x;
+	               age_size++; // aging의 크기 측정
+	               temp_i = i; // aging의 순서는 i
+	            }
+	         }
 
-		while (quantityProcesses > 0) {
-			int age_size = 0;
-			double age[];
-			age = new double[N];
-			for (int i = 0; i < N; i++) {
-				if ((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime) {
-					x = (double) (currentTime - (int) arrival.get(i) + (int) burst.get(i)) / (int) burst.get(i);
-					age[i] = x;
-					age_size++;
-					temp_i = i;
-				}
-			}
+	         if (age_size == 0) { // aging이 0일 때
+	            paint.add(-1);
+	            currentTime++;
+	         } else if (age_size == 1) { // aging이 1일때(기다리는 프로세스가 1개)
+	            arrival.set(temp_i, -1);
+	            while ((int) burst.get(temp_i) > 0) { // BurstTime이 있을경우 반복문 수행
+	               paint.add(temp_i); // 프로세스의 순서 추가
+	               currentTime++;
+	               burstUpdate = ((int) burst.get(temp_i)) - 1;
+	               burst.set(temp_i, burstUpdate); // BurstTime의 값을 최신화
+	            }
+	            end.add(currentTime); // 종료시간을 end 배열에 추가
+	            endTime[temp_i] = currentTime; // BurstTime의 종료시간
+	            quantityProcesses--; // 프로세스의 개수를 감소
+	         } else { // aging이 여러 개(기다리는 프로세스가 다수)
+	            max_age = age[0];
+	            for (int i = 1; i < age.length; i++) {
+	               if (age[i] > max_age) { // aging이 가장 높은 프로세스를 찾는다
+	                  max_age = age[i];
+	                  a = i; // aging이 가장 높은 순서는 a
+	               }
+	            }
+	            arrival.set(a, -1); // 다시 대기열에 들어오지 않도록 -1값으로 변경
+	            while ((int) burst.get(a) > 0) { // BurstTime만큼 반복문 수행
+	               paint.add(a); // 프로세스의 순서 추가
+	               currentTime++;
+	               burstUpdate = ((int) burst.get(a)) - 1;
+	               burst.set(a, burstUpdate);
+	            }
+	            end.add(currentTime); // 종료시간을 end 배열에 추가  
+	            endTime[a] = currentTime; // BurstTime의 종료시간
+	            quantityProcesses--; // 프로세스의 개수를 감소
+	         }
+	      }
 
-			if (age_size == 0) {
-				paint.add(-1);
-				currentTime++;
-			} else if (age_size == 1) {
-				arrival.set(temp_i, -1);
-				ordem += "P" + temp_i + " ";
-				while ((int) burst.get(temp_i) > 0) {
-					paint.add(temp_i);
-					currentTime++;
-					burstUpdate = ((int) burst.get(temp_i)) - 1;
-					burst.set(temp_i, burstUpdate);
-				}
-				end.add(currentTime);
-				endTime[temp_i] = currentTime;
-				quantityProcesses--;
-			} else {
-				max_age = age[0];
-				for (int i = 1; i < age.length; i++) {
-					if (age[i] > max_age) {
-						max_age = age[i];
-						a = i;
-					}
-				}
-				arrival.set(a, -1);
-				ordem += "P" + a + " ";
-				while ((int) burst.get(a) > 0) {
-					paint.add(a);
-					currentTime++;
-					burstUpdate = ((int) burst.get(a)) - 1;
-					burst.set(a, burstUpdate);
-				}
-				end.add(currentTime);
-				endTime[a] = currentTime;
-				quantityProcesses--;
-			}
-		}
+	      for (int i = 0; i < N; i++) {
+	         turnArr[i] = (int) endTime[i] - (int) cparrival.get(i); // TurnAroundTime = 프로세스의 종료시간 - ArrivalTime
+	         NTTArr[i] = Math.round((turnArr[i] / (int) cpburst.get(i)) * 100.0) / 100.0; // ntt = TurnAroundTime / BurstTime
+	         waitArr[i] = turnArr[i] - (int) cpburst.get(i); // WatingTime = TurnAroundTime - BurstTime
+	      }
 
-		for (int i = 0; i < N; i++) {
-			turnArr[i] = (int) endTime[i] - (int) cparrival.get(i);
-			NTTArr[i] = Math.round((turnArr[i] / (int) cpburst.get(i)) * 100.0) / 100.0;
-			waitArr[i] = turnArr[i] - (int) cpburst.get(i);
-		}
+	      endArr = new int[end.size()];
+	      paintArr = new int[paint.size()];
 
-		endArr = new int[end.size()];
-		paintArr = new int[paint.size()];
+	      for (int i = 0; i < end.size(); i++)
+	         endArr[i] = (int) end.get(i); // 프로세스의 끝나는 시간 확인
+	      for (int i = 0; i < paint.size(); i++)
+	         paintArr[i] = (int) paint.get(i); // 프로세스를 시각화할 크기 확인
+	   }
 
-		for (int i = 0; i < end.size(); i++)
-			endArr[i] = (int) end.get(i);
-		for (int i = 0; i < paint.size(); i++)
-			paintArr[i] = (int) paint.get(i);
-	}
+	public void RRR_func() { 
+        
+        int currentTime, execution, q, endTime[], quantityProcesses, burstUpdate;
+        ArrayList process, cparrival, cpburst, exp_num;
+        ArrayList end = new ArrayList();
+        ArrayList paint = new ArrayList();
+        
+        process = new ArrayList();
+        exp_num = new ArrayList();
+        quantityProcesses = N;
+        endTime = new int[N];
+         
+        for(int  i=0 ; i<N ; i++)
+                  exp_num.add(1);
+        
+        cparrival = (ArrayList) arrival.clone();
+        cpburst = (ArrayList) burst.clone();
+        currentTime = 0;
+        
+        while(quantityProcesses > 0)
+        {
+                  for(int i =0 ; i <N ; i++)
+                  {
+                     if((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime)
+                     {
+                          process.add(i);
+                          arrival.set(i, -1);
+                      }
+                  }
+                  if(process.isEmpty())
+                  {
+                     paint.add(-1);
+                     currentTime++;
+                  }
+                  else
+                  {
+                      execution = (int)process.remove(0);
+                      q=quantum;
+                      for(int i=0;i<((int) exp_num.get(execution))-1;i++) //exp_num가 2부터는 quantum의 지수승을 해준다
+                         q *= quantum;
+                      while((q > 0) && ((int) burst.get(execution)) > 0)
+                      {
+                         paint.add(execution);
+                          currentTime++;
+                          q--;
+                          burstUpdate = (int) burst.get(execution) -1;
+                          burst.set(execution, burstUpdate);
+                      }
+                      end.add(currentTime);//여기에 종료시간
+                      int num_temp = (int)exp_num.get(execution);
+                      exp_num.set(execution, num_temp+1);
+                      if((int) burst.get(execution)>0)
+                      {
+                          for(int i=0; i<N ; i++)
+                          {
+                              if((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime)
+                              {
+                                  process.add(i);
+                                  arrival.set(i, -1);
+                              }
+                          }
+                          process.add(execution);
+                      }
+                      else
+                      {
+                          endTime[execution] = currentTime;
+                          quantityProcesses--;
+                      }
+                  }
+              }
+              
+              turnArr = new double[N];
+              for(int i = 0; i<N; i++)
+                 turnArr[i] = endTime[i] - (int)cparrival.get(i);
+              
+              waitArr = new double[N];
+              for(int i = 0; i<N; i++)
+                 waitArr[i] = endTime[i] - (int) cparrival.get(i) - (int) cpburst.get(i);
+              
+              NTTArr = new double[N];
+              for(int i = 0; i<N; i++)
+                 NTTArr[i] = Math.round((turnArr[i] / (int)cpburst.get(i))*100.0)/100.0;
+             endArr = new int [end.size()];
+             for(int i=0;i<end.size();i++)
+                 endArr[i]=(int)end.get(i);
+             
+             paintArr = new int [paint.size()];
+              for(int i=0;i<paint.size();i++)
+                 paintArr[i]=(int)paint.get(i);
 
-	public void RRR_func() {
-
-		int currentTime, execution, q, endTime[], quantityProcesses, burstUpdate, timeExecution[];
-		ArrayList process, cparrival, cpburst, exp_num;
-		double middleHold, turnaround, ntt;
-		ArrayList order = new ArrayList();
-		ArrayList start = new ArrayList();
-		ArrayList end = new ArrayList();
-		ArrayList paint = new ArrayList();
-
-		process = new ArrayList();
-		exp_num = new ArrayList();
-		quantityProcesses = N;
-		endTime = new int[N];
-		timeExecution = new int[N];
-
-		for (int i = 0; i < N; i++)
-			exp_num.add(1);
-
-		cparrival = (ArrayList) arrival.clone();
-		cpburst = (ArrayList) burst.clone();
-		currentTime = 0;
-
-		while (quantityProcesses > 0) {
-			for (int i = 0; i < N; i++) {
-				if ((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime) {
-					process.add(i);
-					order.add(i);
-					arrival.set(i, -1);
-				} // 여기에 시작시간, 수행순서
-			}
-			if (process.isEmpty()) {
-				paint.add(-1);
-				currentTime++;
-			} else {
-				start.add(currentTime);
-				execution = (int) process.remove(0);
-				q = quantum;
-				for (int i = 0; i < ((int) exp_num.get(execution)) - 1; i++) // exp_num가 2부터는 quantum의 지수승을 해준다
-					q *= quantum;
-				while ((q > 0) && ((int) burst.get(execution)) > 0) {
-					paint.add(execution);
-					currentTime++;
-					q--;
-					burstUpdate = (int) burst.get(execution) - 1;
-					burst.set(execution, burstUpdate);
-				} // 여기에 종료시간
-				end.add(currentTime);
-				int num_temp = (int) exp_num.get(execution);
-				exp_num.set(execution, num_temp + 1);
-				if ((int) burst.get(execution) > 0) {
-					for (int i = 0; i < N; i++) {
-						if ((int) arrival.get(i) != -1 && (int) arrival.get(i) <= currentTime) {
-							process.add(i);
-							arrival.set(i, -1);
-						}
-					}
-					process.add(execution);
-				} else {
-					endTime[execution] = currentTime;
-					quantityProcesses--;
-				}
-			}
-		}
-		middleHold = 0;
-
-		turnArr = new double[N];
-
-		for (int i = 0; i < N; i++) {
-			turnaround = (int) endTime[i] - (int) cparrival.get(i);
-			turnArr[i] = turnaround;
-		}
-		waitArr = new double[N];
-
-		for (int i = 0; i < N; i++) {
-			timeExecution[i] = endTime[i] - (int) cparrival.get(i);
-			middleHold = timeExecution[i] - (int) cpburst.get(i);
-			waitArr[i] = middleHold;
-		}
-
-		NTTArr = new double[N];
-
-		for (int i = 0; i < N; i++) {
-			turnaround = (int) endTime[i] - (int) cparrival.get(i);
-			ntt = turnaround / (int) cpburst.get(i);
-			NTTArr[i] = ntt;
-		}
-
-		endArr = new int[end.size()];
-		paintArr = new int[paint.size()];
-
-		for (int i = 0; i < end.size(); i++)
-			endArr[i] = (int) end.get(i);
-		for (int i = 0; i < paint.size(); i++) {
-			paintArr[i] = (int) paint.get(i);
-		}
-	}
+          }
 }
